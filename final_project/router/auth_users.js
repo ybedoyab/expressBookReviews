@@ -45,6 +45,46 @@ regd_users.post("/login", (req, res) => {
   return res.status(200).json({ message: "Login successful", token });
 });
 
+// Add or modify a book review
+regd_users.put("/auth/review/:isbn", (req, res) => {
+  const isbn = req.params.isbn;
+  const review = req.body.review;
+  
+  // Ensure user is logged in
+  const token = req.session.token;
+  if (!token) {
+    return res.status(401).json({ message: "User is not authenticated" });
+  }
+
+  // Verify the token
+  jwt.verify(token, "secretKey", (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ message: "Token is invalid" });
+    }
+
+    const username = decoded.username;
+
+    // Check if the book exists in the database
+    if (!books[isbn]) {
+      return res.status(404).json({ message: "Book not found" });
+    }
+
+    // Check if the user has already reviewed the book
+    const existingReview = books[isbn].reviews.find((r) => r.username === username);
+    
+    if (existingReview) {
+      // Modify existing review
+      existingReview.review = review;
+      return res.status(200).json({ message: "Review updated successfully" });
+    } else {
+      // Add new review
+      books[isbn].reviews.push({ username, review });
+      return res.status(201).json({ message: "Review added successfully" });
+    }
+  });
+});
+
+
 module.exports.authenticated = regd_users;
 module.exports.isValid = isValid;
 module.exports.users = users;
